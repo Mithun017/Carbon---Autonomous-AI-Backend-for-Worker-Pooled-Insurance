@@ -14,6 +14,29 @@ The project follows a **Modular Monolith** architecture with clearly defined dom
 
 ---
 
+## 🧠 AI & ML Intelligence
+
+Carbon features a multi-layered intelligence suite that governs every financial decision:
+
+### 📡 AI Risk Service
+The system evaluates worker risk using engineered features such as **disruption frequency**, **historical volatility**, and **location risk indices**. It provides:
+- **Predictive Scoring**: Real-time risk evaluation (0-1).
+- **Dynamic Calibration**: Automatic categorization (LOW/MEDIUM/HIGH) with premium multipliers.
+- **MLOps Monitoring**: Built-in endpoints for model health and drift detection.
+
+### 🚨 Automated Fraud Shield
+A dedicated layer that protects the insurance pool from abusive behavior:
+- **Anomaly Detection**: Identifies irregularities in claim frequency and amounts.
+- **Audit Trails**: Returns detailed sub-check reports (e.g., identity consistency) for every flag.
+
+### ⚙️ Autonomous Decision Engine
+The core claims pipeline orchestrates AI Risk and Fraud scores to deliver **zero-human intervention** outcomes. Every claim is automatically approved, rejected, or flagged for review based on predictive confidence.
+
+### 📈 Inference Logging
+Every prediction is logged with its unique `prediction_id` and contributing factors, ensuring full explainability (XAI) and enabling continuous model retraining.
+
+---
+
 ## 🚀 Key Features
 
 - 🔐 **Secure Auth**: OTP-based authentication with JWT session management.
