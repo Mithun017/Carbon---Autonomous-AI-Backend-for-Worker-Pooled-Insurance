@@ -4,6 +4,7 @@ from app.core.database import get_session
 from app.schemas.api import OTPRequest, OTPVerify, Token
 from app.services.auth import AuthService, create_access_token
 from app.models.schemas import Worker
+import uuid
 
 router = APIRouter()
 
@@ -32,10 +33,54 @@ def verify_otp(payload: OTPVerify, session: Session = Depends(get_session)):
         "user_id": str(worker.id)
     }
 
+@router.post("/register", response_model=Token)
+def register(payload: WorkerCreate, session: Session = Depends(get_session)):
+    existing = session.exec(select(Worker).where(Worker.phone == payload.phone)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Worker already exists")
+    
+    worker = Worker(
+        phone=payload.phone,
+        full_name=payload.full_name,
+        email=payload.email,
+        is_verified=True
+    )
+    session.add(worker)
+    session.commit()
+    session.refresh(worker)
+    
+    access_token = create_access_token(data={"sub": worker.phone})
+    return {
+        "access_token": access_token,
+        "refresh_token": f"ref_{uuid.uuid4().hex}",
+        "user_id": str(worker.id)
+    }
+
+@router.post("/login", response_model=Token)
+def login(payload: OTPVerify, session: Session = Depends(get_session)):
+    # Mock login for now (same as verify_otp logic)
+    if not AuthService.verify_otp(payload.phone, payload.otp):
+        raise HTTPException(status_code=400, detail="Invalid credentials")
+    
+    worker = session.exec(select(Worker).where(Worker.phone == payload.phone)).first()
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not registered")
+    
+    access_token = create_access_token(data={"sub": worker.phone})
+    return {
+        "access_token": access_token,
+        "refresh_token": f"ref_{uuid.uuid4().hex}",
+        "user_id": str(worker.id)
+    }
+
+@router.post("/refresh")
+def refresh_token():
+    return {"access_token": "new_mock_token", "refresh_token": "new_mock_refresh"}
+
 @router.get("/validate")
 def validate_token():
-    return {"status": "valid"}
+    return {"status": "valid", "scope": "full"}
 
 @router.post("/logout")
 def logout():
-    return {"message": "Logged out"}
+    return {"message": "Successfully logged out"}

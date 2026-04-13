@@ -43,7 +43,27 @@ class Claim(TimestampModel, table=True):
     status: str = Field(default="PENDING") # PENDING, APPROVED, REJECTED, FRAUD_DETECTED
     amount: float
     fraud_score: float = Field(default=0.0)
+    ai_risk_score: float = Field(default=0.0)
     decision_reason: Optional[str] = None
+
+class AIRiskLog(TimestampModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    worker_id: uuid.UUID = Field(foreign_key="worker.id")
+    prediction_id: str = Field(index=True)
+    risk_score: float
+    risk_category: str # LOW, MEDIUM, HIGH
+    premium_multiplier: float
+    confidence: float
+    top_factors: str # JSON string of factors
+
+class Notification(TimestampModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    worker_id: uuid.UUID = Field(foreign_key="worker.id")
+    title: str
+    message: str
+    type: str # DISRUPTION, CLAIM, PAYOUT, SYSTEM
+    status: str = Field(default="SENT") # SENT, READ, FAILED
+    retry_count: int = Field(default=0)
 
 class Payout(TimestampModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)

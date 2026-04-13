@@ -33,6 +33,28 @@ def opt_in(payload: PolicyOptIn, session: Session = Depends(get_session)):
     session.refresh(policy)
     return policy
 
+@router.post("/opt-out")
+def opt_out(worker_id: UUID, session: Session = Depends(get_session)):
+    policy = session.exec(select(Policy).where(Policy.worker_id == worker_id)).first()
+    if not policy:
+        raise HTTPException(status_code=404, detail="Policy not found")
+    policy.is_opted_in = False
+    session.add(policy)
+    session.commit()
+    return {"message": "Successfully opted out of policy"}
+
+@router.post("/create", response_model=PolicyRead)
+def create_policy(payload: PolicyOptIn, session: Session = Depends(get_session)):
+    # Same as opt-in for now
+    return opt_in(payload, session)
+
+@router.post("/validate")
+def validate_policy(worker_id: UUID, session: Session = Depends(get_session)):
+    policy = session.exec(select(Policy).where(Policy.worker_id == worker_id)).first()
+    if not policy or not policy.is_opted_in:
+        return {"is_valid": False, "reason": "No active policy found"}
+    return {"is_valid": True, "policy_id": str(policy.id)}
+
 @router.get("/{user_id}", response_model=PolicyRead)
 def get_policy(user_id: UUID, session: Session = Depends(get_session)):
     policy = session.exec(select(Policy).where(Policy.worker_id == user_id)).first()
