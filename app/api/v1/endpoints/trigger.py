@@ -1,42 +1,46 @@
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 from app.core.database import get_session
-from app.models.schemas import Worker, Policy
+from app.models.schemas import Policy
 from app.services.claims import ClaimService
 from app.services.trigger_service import TriggerService
+from app.schemas.api import (
+    BaseResponse, TriggerMockRequest, TriggerMockData,
+    TriggerWeatherRequest, TriggerWeatherData, TriggerActiveData,
+    TriggerStopRequest, TriggerStopData
+)
+from typing import List, Any
 import random
+import uuid
 
 router = APIRouter()
 
-@router.post("/mock")
-def mock_disruption(event_type: str, session: Session = Depends(get_session)):
+@router.post("/mock", response_model=BaseResponse[TriggerMockData])
+async def mock_disruption(payload: TriggerMockRequest, session: Session = Depends(get_session)):
     """
     Simulates a weather or platform disaster.
-    Finds all active policy holders and triggers auto-claims for them.
     """
-    active_policies = session.exec(select(Policy).where(Policy.is_opted_in == True)).all()
+    event_id = f"evt_{uuid.uuid4().hex[:8]}"
     
-    impacted_count = 0
-    for policy in active_policies:
-        if random.random() > 0.3:
-            ClaimService.process_auto_claim(
-                session,
-                policy.worker_id,
-                event_type,
-                amount=500.0
-            )
-            impacted_count += 1
+    # Trigger the full autonomous cycle
+    from app.services.orchestration_service import OrchestrationEngine
+    event_data = {"type": payload.event_type, "id": event_id}
+    await OrchestrationEngine.run_automation_cycle(session, event_data)
             
-    return {
-        "status": "SUCCESS",
-        "event_type": event_type,
-        "impacted_workers": impacted_count
-    }
+    return BaseResponse(data=TriggerMockData(
+        event_id=event_id,
+        triggered=True
+    ))
 
-@router.get("/active")
+@router.post("/weather", response_model=BaseResponse[TriggerWeatherData])
+def trigger_weather(payload: TriggerWeatherRequest):
+    return BaseResponse(data=TriggerWeatherData(event_detected=True))
+
+@router.get("/active", response_model=BaseResponse[TriggerActiveData])
 def get_active_disruptions():
-    return TriggerService.get_active_disruptions()
+    events = TriggerService.get_active_disruptions()
+    return BaseResponse(data=TriggerActiveData(events=events if isinstance(events, list) else []))
 
-@router.post("/stop")
-def stop_simulation():
-    return {"message": "All simulations stopped"}
+@router.post("/stop", response_model=BaseResponse[TriggerStopData])
+def stop_simulation(payload: TriggerStopRequest):
+    return BaseResponse(data=TriggerStopData(stopped=True))

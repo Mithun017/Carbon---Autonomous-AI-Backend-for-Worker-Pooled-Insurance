@@ -1,0 +1,119 @@
+{
+  "General": [
+    200,
+    {
+      "status": "success",
+      "message": "API Running"
+    }
+  ],
+  "Auth:SendOTP": [
+    200,
+    {
+      "status": "success",
+      "message": null,
+      "data": {
+        "otp_sent": true
+      }
+    }
+  ],
+  "Worker:Profile": [
+    200,
+    {
+      "status": "success",
+      "message": null,
+      "data": {
+        "profile_created": true
+      }
+    }
+  ],
+  "Risk:Health": [
+    200,
+    {
+      "status": "success",
+      "message": null,
+      "data": {
+        "model_status": "healthy"
+      }
+    }
+  ],
+  "Pricing:Calculate": [
+    200,
+    {
+      "status": "success",
+      "message": null,
+      "data": {
+        "premium": 625.0,
+        "breakdown": {
+          "base": 500.0,
+          "tax": 125.0
+        }
+      }
+    }
+  ],
+  "Trigger:Active": [
+    200,
+    {
+      "status": "success",
+      "message": null,
+      "data": {
+        "events": [
+          {
+            "id": "d1",
+            "type": "WEATHER",
+            "zone": "San Francisco",
+            "active": true
+          },
+          {
+            "id": "d2",
+            "type": "TRAFFIC",
+            "zone": "London",
+            "active": true
+          }
+        ]
+      }
+    }
+  ],
+  "Analytics:Dashboard": [
+    200,
+    {
+      "status": "success",
+      "message": null,
+      "data": {
+        "total_workers": 51,
+        "total_payout": 0.0
+      }
+    }
+  ],
+  "Pool:Status": [
+    200,
+    {
+      "status": "success",
+      "message": null,
+      "data": {
+        "balance": 939000.0
+      }
+    }
+  ],
+  "Automation:MockTrigger": [
+    200,
+    {
+      "status": "success",
+      "message": null,
+      "data": {
+        "event_id": "evt_79d21ca1",
+        "triggered": true
+      }
+    }
+  ],
+  "Automation:PostDisruptionAnalytics": [
+    200,
+    {
+      "status": "success",
+      "message": null,
+      "data": {
+        "total_workers": 51,
+        "total_payout": 0.0
+      }
+    }
+  ]
+}

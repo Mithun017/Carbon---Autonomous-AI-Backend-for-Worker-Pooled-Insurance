@@ -1,45 +1,54 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from app.core.database import get_session
-from app.schemas.api import WorkerRead, WorkerCreate
+from app.schemas.api import (
+    BaseResponse, WorkerProfileRequest, WorkerProfileData, 
+    WorkerData, WorkerStatusData
+)
 from app.models.schemas import Worker
 from uuid import UUID
 
 router = APIRouter()
 
-@router.get("/{user_id}", response_model=WorkerRead)
-def get_worker(user_id: UUID, session: Session = Depends(get_session)):
-    worker = session.get(Worker, user_id)
+@router.post("/profile", response_model=BaseResponse[WorkerProfileData])
+def create_profile(payload: WorkerProfileRequest, session: Session = Depends(get_session)):
+    # Contract: user_id, name, phone, zone
+    worker = session.get(Worker, UUID(payload.user_id))
     if not worker:
-        raise HTTPException(status_code=404, detail="Worker not found")
-    return worker
-
-@router.post("/profile", response_model=WorkerRead)
-def create_profile(payload: WorkerCreate, session: Session = Depends(get_session)):
-    # Check if phone exists
-    existing = session.exec(select(Worker).where(Worker.phone == payload.phone)).first()
-    if existing:
-        return existing
+        # If not found by ID (UUID), try finding by phone or create new
+        worker = session.exec(select(Worker).where(Worker.phone == payload.phone)).first()
+        if not worker:
+            worker = Worker(id=UUID(payload.user_id), phone=payload.phone)
+            session.add(worker)
     
-    worker = Worker(
-        phone=payload.phone,
-        full_name=payload.full_name,
-        email=payload.email
-    )
+    worker.full_name = payload.name
+    worker.zone = payload.zone
     session.add(worker)
     session.commit()
-    session.refresh(worker)
-    return worker
+    
+    return BaseResponse(data=WorkerProfileData(profile_created=True))
 
-@router.put("/{user_id}", response_model=WorkerRead)
-def update_worker(user_id: UUID, payload: WorkerCreate, session: Session = Depends(get_session)):
-    worker = session.get(Worker, user_id)
+@router.get("/{id}", response_model=BaseResponse[WorkerData])
+def get_worker(id: UUID, session: Session = Depends(get_session)):
+    worker = session.get(Worker, id)
     if not worker:
         raise HTTPException(status_code=404, detail="Worker not found")
     
-    worker.full_name = payload.full_name
-    worker.email = payload.email
-    session.add(worker)
-    session.commit()
-    session.refresh(worker)
-    return worker
+    return BaseResponse(data=WorkerData(
+        user_id=str(worker.id),
+        name=worker.full_name or "Unknown",
+        zone=worker.zone or "GENERAL",
+        weekly_income=worker.weekly_income or 0.0
+    ))
+
+@router.get("/status/{id}", response_model=BaseResponse[WorkerStatusData])
+def get_worker_status(id: UUID, session: Session = Depends(get_session)):
+    worker = session.get(Worker, id)
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+    
+    # Mock eligibility logic
+    return BaseResponse(data=WorkerStatusData(
+        is_active=worker.is_active,
+        eligible_for_claim=True
+    ))

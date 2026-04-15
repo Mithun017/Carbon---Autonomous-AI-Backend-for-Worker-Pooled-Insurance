@@ -19,12 +19,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import asyncio
+from app.services.orchestration_service import OrchestrationEngine
+
 @app.on_event("startup")
 def on_startup():
     init_db()
+    # Start autonomous monitoring in the background
+    asyncio.create_task(OrchestrationEngine.background_monitor())
 
 app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/")
 def root():
-    return {"message": "Carbon Backend is running", "docs": "/docs"}
+    return {"status": "success", "message": "API Running"}

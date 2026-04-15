@@ -15,6 +15,8 @@ class Worker(TimestampModel, table=True):
     is_active: bool = Field(default=True)
     is_verified: bool = Field(default=False)
     balance: float = Field(default=0.0)
+    zone: Optional[str] = Field(default="GENERAL")
+    weekly_income: float = Field(default=0.0)
 
 class Policy(TimestampModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -72,3 +74,10 @@ class Payout(TimestampModel, table=True):
     amount: float
     status: str = Field(default="PROCESSED") # PROCESSED, FAILED, RETRIED
     idempotency_key: str = Field(unique=True)
+
+class EventLog(TimestampModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    event_id: str = Field(index=True)
+    event_type: str
+    status: str # STARTED, COMPLETED, FAILED
+    details: Optional[str] = None
