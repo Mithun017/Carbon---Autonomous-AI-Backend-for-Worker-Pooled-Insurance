@@ -401,6 +401,34 @@ The beauty of Carbon is its zero-touch automation. Here is how it works under th
 
 ---
 
+## 🤖 Autonomous Orchestration Deep-Dive
+
+Carbon's defining feature is its **zero-touch automation**. The system is designed to run continuously in the background, making financial decisions without human intervention.
+
+### 1. The Autonomous "Ear" (`background_monitor`)
+Located in `app/services/orchestration_service.py`, the `background_monitor` is a resilient polling task that:
+- **Polls Every 60s**: Checks for real-time weather and platform disruptions.
+- **Exponential Backoff**: If external APIs or the database fail, the monitor gracefully slows down retries (5s -> 10s -> 20s...) until the system stabilizes.
+- **Stateless Recovery**: If the server restarts, the monitor immediately resumes tracking from the last logged event.
+
+### 2. Startup Lifecycle
+The automation engine is initialized immediately upon application startup. In `app/main.py`:
+```python
+@app.on_event("startup")
+def on_startup():
+    # Initializes DB tables & Event Logs
+    init_db() 
+    # Spawns the autonomous engine as a decoupled background task
+    asyncio.create_task(OrchestrationEngine.background_monitor())
+```
+
+### 3. Traceability & Integrity
+Every decision made by the AI is logged for audit:
+- **EventLog**: Tracks every cycle from `STARTED` to `COMPLETED`.
+- **Idempotency**: Payouts are tied to unique `claim_id` and `event_id` combinations, ensuring no worker is ever paid twice for the same disruption.
+
+---
+
 ## 🚀 Setup, Environment & Deployment
 
 ### Manual Installation
