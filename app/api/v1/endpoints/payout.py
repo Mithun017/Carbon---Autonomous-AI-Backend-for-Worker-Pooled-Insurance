@@ -13,19 +13,22 @@ router = APIRouter()
 
 @router.get("/{user_id}", response_model=BaseResponse[List[PayoutData]])
 def get_user_payouts(user_id: UUID, session: Session = Depends(get_session)):
+    # Contract 10.1: payout_id, claim_id, amount, status, paid_at
     payouts = PayoutService.get_user_payouts(session, user_id)
     data = [
         PayoutData(
+            payout_id=str(p.id),
+            claim_id=str(p.claim_id),
             amount=p.amount,
-            status=p.status
+            status=p.status.lower(),
+            paid_at=p.created_at.isoformat() if p.created_at else None
         ) for p in payouts
     ]
     return BaseResponse(data=data)
 
 @router.post("/process", response_model=BaseResponse[PayoutProcessData])
 def process_payout(payload: PayoutProcessRequest, session: Session = Depends(get_session)):
-    # Contract: claim_id, Response: payout_status
-    # We need to find the claim to get worker_id and amount
+    # Contract 10.2: payout_id, amount, status
     from app.models.schemas import Claim
     claim = session.get(Claim, UUID(payload.claim_id))
     if not claim:
@@ -33,7 +36,11 @@ def process_payout(payload: PayoutProcessRequest, session: Session = Depends(get
          
     try:
         payout = PayoutService.process_payout(session, claim.id, claim.worker_id, claim.amount)
-        return BaseResponse(data=PayoutProcessData(payout_status=payout.status))
+        return BaseResponse(data=PayoutProcessData(
+            payout_id=str(payout.id),
+            amount=payout.amount,
+            status=payout.status.lower()
+        ))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

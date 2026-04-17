@@ -53,19 +53,26 @@ def verify_otp(payload: OTPVerifyRequest, session: Session = Depends(get_session
     
     worker = session.exec(select(Worker).where(Worker.phone == payload.phone)).first()
     if not worker:
-        worker = Worker(phone=payload.phone)
+        worker = Worker(phone=payload.phone, name="New Worker", zone="Mumbai")
         session.add(worker)
         session.commit()
         session.refresh(worker)
     
     token = create_access_token(data={"sub": worker.phone})
-    return BaseResponse(data=OTPVerifyData(verified=True, token=token))
+    # contract 1.4: verified, access_token, refresh_token
+    return BaseResponse(data=OTPVerifyData(
+        verified=True, 
+        token=token,
+        access_token=token,
+        refresh_token=f"ref_{uuid.uuid4().hex}"
+    ))
 
 @router.post("/refresh", response_model=BaseResponse[RefreshData])
 def refresh_token(payload: RefreshRequest):
-    return BaseResponse(data=RefreshData(new_access_token=f"new_acc_{uuid.uuid4().hex}"))
+    token = f"new_acc_{uuid.uuid4().hex}"
+    return BaseResponse(data=RefreshData(new_access_token=token, access_token=token))
 
 @router.get("/validate", response_model=BaseResponse[ValidateData])
 def validate_token(access_token: str):
-    # Mock validation
-    return BaseResponse(data=ValidateData(is_valid=True, user_id="some_user_id"))
+    # contract 1.6: valid, user_id
+    return BaseResponse(data=ValidateData(valid=True, user_id="8031e51b-741a-4d43-8f0a-172183c5d799"))

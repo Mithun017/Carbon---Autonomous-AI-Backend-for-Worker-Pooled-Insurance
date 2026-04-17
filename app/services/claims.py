@@ -8,7 +8,7 @@ import uuid
 
 class ClaimService:
     @staticmethod
-    def process_auto_claim(session: Session, worker_id: uuid.UUID, event_type: str, amount: float):
+    def process_auto_claim(session: Session, worker_id: uuid.UUID, event_type: str, amount: float, event_id: str = None):
         # 1. Check Policy Eligibility
         from sqlmodel import select
         policy = session.exec(select(Policy).where(Policy.worker_id == worker_id)).first()
@@ -41,6 +41,7 @@ class ClaimService:
         claim = Claim(
             worker_id=worker_id,
             event_type=event_type,
+            event_id=event_id,
             amount=amount,
             status=status,
             fraud_score=fraud_score,
@@ -65,3 +66,4 @@ class ClaimService:
             PayoutService.process_payout(session, claim.id, worker_id, amount)
             
         return claim
+

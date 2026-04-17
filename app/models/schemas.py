@@ -42,6 +42,7 @@ class Claim(TimestampModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     worker_id: uuid.UUID = Field(foreign_key="worker.id")
     event_type: str # WEATHER, PLATFORM, SOCIAL
+    event_id: Optional[str] = Field(default=None, index=True)  # Triggering event reference
     status: str = Field(default="PENDING") # PENDING, APPROVED, REJECTED, FRAUD_DETECTED
     amount: float
     fraud_score: float = Field(default=0.0)

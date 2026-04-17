@@ -56,7 +56,8 @@ class OrchestrationEngine:
                         session, 
                         worker.id, 
                         event_type, 
-                        amount=500.0 # Standard disruption payout
+                        amount=500.0, # Standard disruption payout
+                        event_id=event_id
                     )
                     if claim and claim.status == "APPROVED":
                         impacted_count += 1

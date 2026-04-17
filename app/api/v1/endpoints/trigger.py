@@ -7,7 +7,7 @@ from app.services.trigger_service import TriggerService
 from app.schemas.api import (
     BaseResponse, TriggerMockRequest, TriggerMockData,
     TriggerWeatherRequest, TriggerWeatherData, TriggerActiveData,
-    TriggerStopRequest, TriggerStopData
+    TriggerStopRequest, TriggerStopData, ActiveEvent
 )
 from typing import List, Any
 import random
@@ -18,7 +18,7 @@ router = APIRouter()
 @router.post("/mock", response_model=BaseResponse[TriggerMockData])
 async def mock_disruption(payload: TriggerMockRequest, session: Session = Depends(get_session)):
     """
-    Simulates a weather or platform disaster.
+    Simulates a weather or platform disaster and runs the full autonomous cycle.
     """
     event_id = f"evt_{uuid.uuid4().hex[:8]}"
     
@@ -29,6 +29,7 @@ async def mock_disruption(payload: TriggerMockRequest, session: Session = Depend
             
     return BaseResponse(data=TriggerMockData(
         event_id=event_id,
+        event_type=payload.event_type,
         triggered=True
     ))
 
@@ -39,7 +40,16 @@ def trigger_weather(payload: TriggerWeatherRequest):
 @router.get("/active", response_model=BaseResponse[TriggerActiveData])
 def get_active_disruptions():
     events = TriggerService.get_active_disruptions()
-    return BaseResponse(data=TriggerActiveData(events=events if isinstance(events, list) else []))
+    # GAP-3: Standardize to event_type and zone
+    formatted_events = []
+    for e in (events if isinstance(events, list) else []):
+        formatted_events.append(ActiveEvent(
+            id=e.get("id"),
+            event_type=e.get("type", e.get("event_type")),
+            zone=e.get("location", e.get("zone")),
+            active=e.get("active", True)
+        ))
+    return BaseResponse(data=TriggerActiveData(events=formatted_events))
 
 @router.post("/stop", response_model=BaseResponse[TriggerStopData])
 def stop_simulation(payload: TriggerStopRequest):

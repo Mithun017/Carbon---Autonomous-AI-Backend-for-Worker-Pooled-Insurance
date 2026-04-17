@@ -78,6 +78,9 @@ def test_risk_endpoints():
         "user_id": uid, "location": "12.9, 77.5", "activity_data": {}
     })
     assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert "risk_score" in data
+    assert "risk_level" in data
     
     resp = client.get("/api/v1/risk/drift")
     assert resp.status_code == 200
@@ -87,6 +90,8 @@ def test_risk_endpoints():
     
     resp = client.get("/api/v1/risk/health")
     assert resp.status_code == 200
+    # GAP-2: model_status must be one of the contract-defined values
+    assert resp.json()["data"]["model_status"] in ("healthy", "degraded", "offline")
 
 # 4. PRICING APIs
 def test_pricing_endpoints():
@@ -126,12 +131,23 @@ def test_policy_endpoints():
 def test_trigger_endpoints():
     resp = client.post("/api/v1/trigger/mock", json={"event_type": "RAIN", "duration": "2h"})
     assert resp.status_code == 200
+    data = resp.json()["data"]
+    # GAP-3: Validate trigger mock response shape
+    assert "event_id" in data, "event_id missing from trigger mock response"
+    assert "triggered" in data, "triggered field missing from trigger mock response"
+    assert data["triggered"] is True, "triggered must be True after mock"
+    assert "event_type" in data, "event_type missing from trigger mock response"
     
     resp = client.post("/api/v1/trigger/weather", json={"location": "Bangalore"})
     assert resp.status_code == 200
     
     resp = client.get("/api/v1/trigger/active")
     assert resp.status_code == 200
+    # GAP-3: active events must include event_type and zone
+    events = resp.json()["data"]["events"]
+    for e in events:
+        assert "event_type" in e
+        assert "zone" in e
     
     resp = client.post("/api/v1/trigger/stop", json={"event_id": "evt_123"})
     assert resp.status_code == 200
@@ -141,6 +157,10 @@ def test_claim_endpoints():
     uid = get_uid()
     resp = client.post("/api/v1/claims/auto", json={"event_id": "evt_123"})
     assert resp.status_code == 200
+    data = resp.json()["data"]
+    # Contract 5.1: must return claims_triggered count
+    assert "claims_triggered" in data, "claims_triggered missing from auto claim response"
+    assert isinstance(data["claims_triggered"], int)
     
     resp = client.get(f"/api/v1/claims/{uid}")
     assert resp.status_code == 200
@@ -206,12 +226,28 @@ def test_notify_endpoints():
 def test_analytics_endpoints():
     resp = client.get("/api/v1/analytics/dashboard")
     assert resp.status_code == 200
+    data = resp.json()["data"]
+    # Validate all 9 required contract fields are present
+    required_fields = [
+        "total_workers", "total_payout", "active_policies",
+        "pending_claims", "approved_claims", "rejected_claims",
+        "total_claims", "system_health", "last_updated"
+    ]
+    for field in required_fields:
+        assert field in data, f"Analytics dashboard missing field: {field}"
+    assert data["system_health"] in ("OPTIMAL", "DEGRADED", "OFFLINE")
     
     resp = client.get("/api/v1/analytics/timeseries")
     assert resp.status_code == 200
     
     resp = client.get("/api/v1/analytics/zones")
     assert resp.status_code == 200
+    zones = resp.json()["data"]
+    # Zones must be derived from DB — each entry needs zone, risk_level, active_workers
+    for z in zones:
+        assert "zone" in z
+        assert "risk_level" in z
+        assert "active_workers" in z
 
 # 13. POOL APIs
 def test_pool_endpoints():

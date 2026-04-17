@@ -37,26 +37,34 @@ def create_policy(payload: PolicyCreateRequest, session: Session = Depends(get_s
     
     return BaseResponse(data=PolicyCreateData(
         policy_id=str(policy.id),
-        active=True
+        user_id=str(policy.worker_id),
+        premium=policy.premium_amount,
+        plan=payload.plan,
+        status="active"
     ))
 
 @router.get("/{user_id}", response_model=BaseResponse[PolicyData])
 def get_policy(user_id: UUID, session: Session = Depends(get_session)):
     policy = session.exec(select(Policy).where(Policy.worker_id == user_id)).first()
     if not policy:
-        raise HTTPException(status_code=404, detail="Policy not found")
-        
+        raise HTTPException(status_code=404, detail="No policy found for this user")
+         
     return BaseResponse(data=PolicyData(
         policy_id=str(policy.id),
+        user_id=str(policy.worker_id),
         premium=policy.premium_amount,
+        plan="STANDARD", # Default plan if not in model
         status="active" if policy.is_opted_in else "inactive"
     ))
 
 @router.post("/validate", response_model=BaseResponse[PolicyValidateData])
 def validate_policy(payload: PolicyValidateRequest, session: Session = Depends(get_session)):
     policy = session.exec(select(Policy).where(Policy.worker_id == UUID(payload.user_id))).first()
-    is_valid = policy is not None and policy.is_opted_in
-    return BaseResponse(data=PolicyValidateData(is_valid=is_valid))
+    valid = policy is not None and policy.is_opted_in
+    return BaseResponse(data=PolicyValidateData(
+        valid=valid,
+        reason="Active policy confirmed" if valid else "No active policy found"
+    ))
 
 @router.post("/cancel/{user_id}", response_model=BaseResponse[PolicyCancelData])
 def cancel_policy(user_id: UUID, session: Session = Depends(get_session)):

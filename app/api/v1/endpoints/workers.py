@@ -7,6 +7,7 @@ from app.schemas.api import (
 )
 from app.models.schemas import Worker
 from uuid import UUID
+from datetime import datetime
 
 router = APIRouter()
 
@@ -26,7 +27,7 @@ def create_profile(payload: WorkerProfileRequest, session: Session = Depends(get
     session.add(worker)
     session.commit()
     
-    return BaseResponse(data=WorkerProfileData(profile_created=True))
+    return BaseResponse(data=WorkerProfileData(profile_created=True, user_id=payload.user_id))
 
 @router.get("/{id}", response_model=BaseResponse[WorkerData])
 def get_worker(id: UUID, session: Session = Depends(get_session)):
@@ -37,6 +38,7 @@ def get_worker(id: UUID, session: Session = Depends(get_session)):
     return BaseResponse(data=WorkerData(
         user_id=str(worker.id),
         name=worker.full_name or "Unknown",
+        phone=worker.phone,
         zone=worker.zone or "GENERAL",
         weekly_income=worker.weekly_income or 0.0
     ))
@@ -47,8 +49,10 @@ def get_worker_status(id: UUID, session: Session = Depends(get_session)):
     if not worker:
         raise HTTPException(status_code=404, detail="Worker not found")
     
-    # Mock eligibility logic
+    # Contract 2.3: user_id, status, last_active, zone
     return BaseResponse(data=WorkerStatusData(
-        is_active=worker.is_active,
-        eligible_for_claim=True
+        user_id=str(worker.id),
+        status="active" if worker.is_active else "inactive",
+        last_active=datetime.utcnow().isoformat(),
+        zone=worker.zone
     ))
